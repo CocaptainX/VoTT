@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - js-src/providers/export/tensorFlowRecords.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>js-src/providers/export/tensorFlowRecords.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">71.56</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">268</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">67.51</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">3.94</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator[&quot;throw&quot;](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import _ from &quot;lodash&quot;;
+import CryptoJS from &quot;crypto-js&quot;;
+import { ExportProvider, ExportAssetState } from &quot;./exportProvider&quot;;
+import { AssetState, RegionType } from &quot;../../models/applicationState&quot;;
+import { AssetService } from &quot;../../services/assetService&quot;;
+import Guard from &quot;../../common/guard&quot;;
+import HtmlFileReader from &quot;../../common/htmlFileReader&quot;;
+import { itemTemplate } from &quot;./tensorFlowPascalVOC/tensorFlowPascalVOCTemplates&quot;;
+import { interpolate } from &quot;../../common/strings&quot;;
+import { TFRecordsImageMessage, Features, Feature, BytesList, Int64List, FloatList } from &quot;./tensorFlowRecords/tensorFlowRecordsProtoBuf_pb&quot;;
+import { crc32c, maskCrc, getInt64Buffer, getInt32Buffer } from &quot;./tensorFlowRecords/tensorFlowHelpers&quot;;
+/**
+ * @name - TFRecords Json Export Provider
+ * @description - Exports a project into a single JSON file that include all configured assets
+ */
+export class TFRecordsJsonExportProvider extends ExportProvider {
+    constructor(project, options) {
+        super(project, options);
+        Guard.null(options);
+    }
+    /**
+     * Export project to TensorFlow Records
+     */
+    export() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const assetService = new AssetService(this.project);
+            let predicate = null;
+            switch (this.options.assetState) {
+                case ExportAssetState.All:
+                    predicate = (asset) =&gt; true;
+                    break;
+                case ExportAssetState.Visited:
+                    predicate = (asset) =&gt; asset.state === AssetState.Visited || asset.state === AssetState.Tagged;
+                    break;
+                case ExportAssetState.Tagged:
+                    predicate = (asset) =&gt; asset.state === AssetState.Tagged;
+                    break;
+            }
+            const loadAssetTasks = _.values(this.project.assets)
+                .filter(predicate)
+                .map((asset) =&gt; assetService.getAssetMetadata(asset));
+            const allAssets = yield Promise.all(loadAssetTasks);
+            const exportObject = Object.assign({}, this.project);
+            exportObject.assets = _.keyBy(allAssets, (assetMetadata) =&gt; assetMetadata.asset.id);
+            // Create Export Folder
+            const exportFolderName = `${this.project.name.replace(&quot; &quot;, &quot;-&quot;)}-TFRecords-export`;
+            yield this.storageProvider.createContainer(exportFolderName);
+            yield this.exportPBTXT(exportFolderName, this.project);
+            yield this.exportRecords(exportFolderName, allAssets);
+        });
+    }
+    addIntFeature(features, key, value) {
+        const intList = new Int64List();
+        intList.addValue(value);
+        const feature = new Feature();
+        feature.setInt64List(intList);
+        const featuresMap = features.getFeatureMap();
+        featuresMap.set(key, feature);
+    }
+    addIntArrayFeature(features, key, values) {
+        const intList = new Int64List();
+        values.forEach((value) =&gt; {
+            intList.addValue(value);
+        });
+        const feature = new Feature();
+        feature.setInt64List(intList);
+        const featuresMap = features.getFeatureMap();
+        featuresMap.set(key, feature);
+    }
+    addFloatArrayFeature(features, key, values) {
+        const floatList = new FloatList();
+        values.forEach((value) =&gt; {
+            floatList.addValue(value);
+        });
+        const feature = new Feature();
+        feature.setFloatList(floatList);
+        const featuresMap = features.getFeatureMap();
+        featuresMap.set(key, feature);
+    }
+    addStringFeature(features, key, value) {
+        this.addBinaryArrayFeature(features, key, this.textEncode(value));
+    }
+    addBinaryArrayFeature(features, key, value) {
+        const byteList = new BytesList();
+        byteList.addValue(value);
+        const feature = new Feature();
+        feature.setBytesList(byteList);
+        const featuresMap = features.getFeatureMap();
+        featuresMap.set(key, feature);
+    }
+    addStringArrayFeature(features, key, values) {
+        const byteList = new BytesList();
+        values.forEach((value) =&gt; {
+            byteList.addValue(this.textEncode(value));
+        });
+        const feature = new Feature();
+        feature.setBytesList(byteList);
+        const featuresMap = features.getFeatureMap();
+        featuresMap.set(key, feature);
+    }
+    writeTFRecord(fileNamePath, features) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Get Protocol Buffer TFRecords object with exported image features
+                const imageMessage = new TFRecordsImageMessage();
+                imageMessage.setContext(features);
+                // Serialize Protocol Buffer in a buffer
+                const bytes = imageMessage.serializeBinary();
+                const bufferData = new Buffer(bytes);
+                const length = bufferData.length;
+                // Get TFRecords CRCs for TFRecords Header and Footer
+                const bufferLength = getInt64Buffer(length);
+                const bufferLengthMaskedCRC = getInt32Buffer(maskCrc(crc32c(bufferLength)));
+                const bufferDataMaskedCRC = getInt32Buffer(maskCrc(crc32c(bufferData)));
+                // Concatenate all TFRecords Header, Data and Footer buffer
+                const outBuffer = Buffer.concat([bufferLength,
+                    bufferLengthMaskedCRC,
+                    bufferData,
+                    bufferDataMaskedCRC]);
+                // Write TFRecords
+                yield this.storageProvider.writeBinary(fileNamePath, outBuffer);
+            }
+            catch (error) {
+                // Ignore the error at the moment
+                // TODO: Refactor ExportProvider abstract class export() method
+                //       to return Promise&lt;object&gt; with an object containing
+                //       the number of files succesfully exported out of total
+                console.log(`Error Writing TFRecords ${fileNamePath} - ${error}`);
+            }
+        });
+    }
+    exportRecords(exportFolderName, allAssets) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const allImageExports = allAssets.map((element) =&gt; {
+                return this.exportSingleRecord(exportFolderName, element);
+            });
+            yield Promise.all(allImageExports);
+        });
+    }
+    exportSingleRecord(exportFolderName, element) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) =&gt; __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const imageBuffer = yield HtmlFileReader.getAssetArray(element.asset);
+                    // Get Base64
+                    const image64 = btoa(imageBuffer.reduce((data, byte) =&gt; data + String.fromCharCode(byte), &quot;&quot;));
+                    const imageInfo = {
+                        width: element.asset.size ? element.asset.size.width : 0,
+                        height: element.asset.size ? element.asset.size.height : 0,
+                        text: [],
+                        label: [],
+                        xmin: [],
+                        ymin: [],
+                        xmax: [],
+                        ymax: [],
+                        difficult: [],
+                        truncated: [],
+                        view: [],
+                    };
+                    if (!element.asset.size || element.asset.size.width === 0 || element.asset.size.height === 0) {
+                        yield this.updateImageSizeInfo(image64, imageInfo);
+                    }
+                    // Get Array of all Box shaped tag for the Asset
+                    this.updateAssetTagArrays(element, imageInfo);
+                    // Generate TFRecord
+                    const features = new Features();
+                    this.addIntFeature(features, &quot;image/height&quot;, imageInfo.height);
+                    this.addIntFeature(features, &quot;image/width&quot;, imageInfo.width);
+                    this.addStringFeature(features, &quot;image/filename&quot;, element.asset.name);
+                    this.addStringFeature(features, &quot;image/source_id&quot;, element.asset.name);
+                    this.addStringFeature(features, &quot;image/key/sha256&quot;, CryptoJS.SHA256(imageBuffer)
+                        .toString(CryptoJS.enc.Base64));
+                    this.addBinaryArrayFeature(features, &quot;image/encoded&quot;, imageBuffer);
+                    this.addStringFeature(features, &quot;image/format&quot;, element.asset.name.split(&quot;.&quot;).pop());
+                    this.addFloatArrayFeature(features, &quot;image/object/bbox/xmin&quot;, imageInfo.xmin);
+                    this.addFloatArrayFeature(features, &quot;image/object/bbox/ymin&quot;, imageInfo.ymin);
+                    this.addFloatArrayFeature(features, &quot;image/object/bbox/xmax&quot;, imageInfo.xmax);
+                    this.addFloatArrayFeature(features, &quot;image/object/bbox/ymax&quot;, imageInfo.ymax);
+                    this.addStringArrayFeature(features, &quot;image/object/class/text&quot;, imageInfo.text);
+                    this.addIntArrayFeature(features, &quot;image/object/class/label&quot;, imageInfo.label);
+                    this.addIntArrayFeature(features, &quot;image/object/difficult&quot;, imageInfo.difficult);
+                    this.addIntArrayFeature(features, &quot;image/object/truncated&quot;, imageInfo.truncated);
+                    this.addStringArrayFeature(features, &quot;image/object/view&quot;, imageInfo.view);
+                    // Save TFRecord
+                    const fileName = element.asset.name.split(&quot;.&quot;).slice(0, -1).join(&quot;.&quot;);
+                    const fileNamePath = `${exportFolderName}/${fileName}.tfrecord`;
+                    yield this.writeTFRecord(fileNamePath, features);
+                    resolve();
+                }
+                catch (error) {
+                    // Ignore the error at the moment
+                    // TODO: Refactor ExportProvider abstract class export() method
+                    //       to return Promise&lt;object&gt; with an object containing
+                    //       the number of files succesfully exported out of total
+                    console.log(`Error downloading ${element.asset.path} - ${error}`);
+                    resolve();
+                    // eject(err);
+                }
+            }));
+        });
+    }
+    updateImageSizeInfo(image64, imageInfo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (image64.length &gt; 10) {
+                const assetProps = yield HtmlFileReader.readAssetAttributesWithBuffer(image64);
+                if (assetProps) {
+                    imageInfo.width = assetProps.width;
+                    imageInfo.height = assetProps.height;
+                }
+                else {
+                    console.log(&quot;imageInfo not found&quot;);
+                }
+            }
+        });
+    }
+    updateAssetTagArrays(element, imageInfo) {
+        element.regions.filter((region) =&gt; (region.type === RegionType.Rectangle ||
+            region.type === RegionType.Square) &amp;&amp;
+            region.points.length === 2)
+            .forEach((region) =&gt; {
+            region.tags.forEach((tag) =&gt; {
+                const index = this.project.tags.map((pTag) =&gt; pTag.name).indexOf(tag.name);
+                imageInfo.text.push(tag.name);
+                imageInfo.label.push(index);
+                imageInfo.xmin.push(region.points[0].x);
+                imageInfo.ymin.push(region.points[0].y);
+                imageInfo.xmax.push(region.points[1].x);
+                imageInfo.ymax.push(region.points[1].y);
+                imageInfo.difficult.push(0);
+                imageInfo.truncated.push(0);
+                imageInfo.view.push(&quot;Unspecified&quot;);
+            });
+        });
+    }
+    exportPBTXT(exportFolderName, project) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (project.tags &amp;&amp; project.tags.length &gt; 0) {
+                // Save tf_label_map.pbtxt
+                const pbtxtFileName = `${exportFolderName}/tf_label_map.pbtxt`;
+                let id = 1;
+                const items = project.tags.map((element) =&gt; {
+                    const params = {
+                        id: (id++).toString(),
+                        tag: element.name,
+                    };
+                    return interpolate(itemTemplate, params);
+                });
+                yield this.storageProvider.writeText(pbtxtFileName, items.join(&quot;&quot;));
+            }
+        });
+    }
+    textEncode(str) {
+        const utf8 = unescape(encodeURIComponent(str));
+        const result = new Uint8Array(utf8.length);
+        for (let i = 0; i &lt; utf8.length; i++) {
+            result[i] = utf8.charCodeAt(i);
+        }
+        return result;
+    }
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ cyclomatic }} <br>
+    Length : {{ halstead.length }} <br>
+    Difficulty : {{ halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>
